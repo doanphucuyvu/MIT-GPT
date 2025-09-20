@@ -1,0 +1,2372 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIT GPT</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --secondary: #8b5cf6;
+      --accent: #0ea5e9;
+      --light-bg: #f8fafc;
+      --dark-bg: #0f172a;
+      --light-text: #1e293b;
+      --dark-text: #f1f5f9;
+      --light-card: #ffffff;
+      --dark-card: #1e293b;
+      --light-border: #e2e8f0;
+      --dark-border: #334155;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+      --gemini: #8e44ad;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--light-bg);
+      color: var(--light-text);
+      transition: background 0.3s ease, color 0.3s ease;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.dark-mode {
+      background: var(--dark-bg);
+      color: var(--dark-text);
+    }
+
+    .container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar trái - Câu hỏi thường gặp */
+    .sidebar {
+      width: 320px;
+      background: var(--light-card);
+      border-right: 1px solid var(--light-border);
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+      z-index: 100;
+    }
+
+    body.dark-mode .sidebar {
+      background: var(--dark-card);
+      border-right: 1px solid var(--dark-border);
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--light-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    body.dark-mode .sidebar-header {
+      border-bottom: 1px solid var(--dark-border);
+    }
+
+    .sidebar-header h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-container {
+      padding: 15px;
+      position: relative;
+    }
+
+    .search-box {
+      width: 100%;
+      padding: 12px 15px 12px 40px;
+      border-radius: 10px;
+      border: 1px solid var(--light-border);
+      background: var(--light-bg);
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    body.dark-mode .search-box {
+      background: var(--dark-bg);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .search-box:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+    }
+
+    .questions-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 15px;
+    }
+
+    .category {
+      margin-bottom: 15px;
+      border-radius: 10px;
+      background: var(--light-bg);
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    body.dark-mode .category {
+      background: rgba(30, 41, 59, 0.5);
+    }
+
+    .category-header {
+      padding: 12px 15px;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .category-content {
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .category-content.active {
+      max-height: 500px;
+    }
+
+    .question-btn {
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--light-card);
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      color: var(--light-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    body.dark-mode .question-btn {
+      background: var(--dark-card);
+      color: var(--dark-text);
+    }
+
+    .question-btn:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Phần chat chính */
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      min-height: 0; /* Quan trọng: cho phép thu nhỏ trên mobile */
+    }
+
+    .chat-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--light-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--light-card);
+      flex-shrink: 0;
+    }
+
+    body.dark-mode .chat-header {
+      background: var(--dark-card);
+      border-bottom: 1px solid var(--dark-border);
+    }
+
+    .chat-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+
+    .chat-title h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 80%;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .avatar.bot {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+    }
+
+    .avatar.user {
+      background: linear-gradient(135deg, #f97316, #f59e0b);
+      color: white;
+    }
+
+    .message-content {
+      padding: 15px;
+      border-radius: 18px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .bot .message-content {
+      background: var(--light-card);
+      border-top-left-radius: 4px;
+      color: var(--light-text);
+    }
+
+    body.dark-mode .bot .message-content {
+      background: var(--dark-card);
+      color: var(--dark-text);
+    }
+
+    .user .message-content {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border-top-right-radius: 4px;
+    }
+
+    .chat-input-container {
+      padding: 15px;
+      background: var(--light-card);
+      border-top: 1px solid var(--light-border);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    body.dark-mode .chat-input-container {
+      background: var(--dark-card);
+      border-top: 1px solid var(--dark-border);
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--light-border);
+      background: var(--light-bg);
+      color: var(--light-text);
+      font-size: 15px;
+      resize: none;
+      min-height: 50px;
+      max-height: 120px;
+      transition: all 0.3s;
+    }
+
+    body.dark-mode .chat-input {
+      background: var(--dark-bg);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .send-btn {
+      padding: 0 16px;
+      height: 50px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+
+    /* Thanh công cụ bên phải */
+    .toolbar-sidebar {
+      width: 280px;
+      background: var(--light-card);
+      border-left: 1px solid var(--light-border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 15px;
+      gap: 15px;
+      transition: all 0.3s ease;
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.05);
+      z-index: 100;
+    }
+
+    body.dark-mode .toolbar-sidebar {
+      background: var(--dark-card);
+      border-left: 1px solid var(--dark-border);
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .toolbar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--light-border);
+    }
+
+    body.dark-mode .toolbar-header {
+      border-bottom: 1px solid var(--dark-border);
+    }
+
+    .toolbar-header h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tool-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      background: var(--light-bg);
+      border: 1px solid var(--light-border);
+      color: var(--light-text);
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      font-weight: 500;
+      width: 100%;
+    }
+
+    body.dark-mode .tool-btn {
+      background: var(--dark-bg);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .tool-btn:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* Thanh công cụ trên cùng cho mobile */
+    .mobile-top-toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: none;
+      background: var(--light-card);
+      padding: 10px 15px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    body.dark-mode .mobile-top-toolbar {
+      background: var(--dark-card);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .mobile-top-tool-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--light-bg);
+      border: 1px solid var(--light-border);
+      color: var(--light-text);
+      cursor: pointer;
+      transition: all 0.3s;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      gap: 8px;
+    }
+
+    body.dark-mode .mobile-top-tool-btn {
+      background: var(--dark-bg);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .mobile-top-tool-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Hiệu ứng tải */
+    .typing-indicator {
+      display: flex;
+      padding: 15px;
+      background: var(--light-card);
+      border-radius: 18px;
+      border-top-left-radius: 4px;
+      width: fit-content;
+      gap: 5px;
+    }
+
+    body.dark-mode .typing-indicator {
+      background: var(--dark-card);
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: typingAnimation 1.4s infinite;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    /* Toast thông báo */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--dark-card);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    /* API Key Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+
+    .modal.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: var(--light-card);
+      border-radius: 12px;
+      padding: 25px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    body.dark-mode .modal-content {
+      background: var(--dark-card);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      font-size: 1.5rem;
+      color: var(--primary);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--light-text);
+    }
+
+    body.dark-mode .modal-close {
+      color: var(--dark-text);
+    }
+
+    .api-tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--light-border);
+    }
+
+    body.dark-mode .api-tabs {
+      border-bottom: 1px solid var(--dark-border);
+    }
+
+    .api-tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .api-tab.active {
+      border-bottom: 3px solid var(--primary);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .api-tab.gemini.active {
+      border-bottom: 3px solid var(--gemini);
+      color: var(--gemini);
+    }
+
+    .api-tab-content {
+      display: none;
+    }
+
+    .api-tab-content.active {
+      display: block;
+    }
+
+    .api-key-input {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 8px;
+      border: 1px solid var(--light-border);
+      background: var(--light-bg);
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+
+    body.dark-mode .api-key-input {
+      background: var(--dark-bg);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .api-key-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .gemini-input:focus {
+      border-color: var(--gemini);
+      box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.1);
+    }
+
+    .api-info {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+
+    body.dark-mode .api-info {
+      color: #94a3b8;
+    }
+
+    .ai-model-selector {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 8px;
+      border: 1px solid var(--light-border);
+      background: var(--light-bg);
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: var(--light-text);
+    }
+
+    body.dark-mode .ai-model-selector {
+      background: var(--dark-bg);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .modal-btn.primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .modal-btn.gemini {
+      background: var(--gemini);
+      color: white;
+    }
+
+    .modal-btn.secondary {
+      background: var(--light-bg);
+      color: var(--light-text);
+    }
+
+    body.dark-mode .modal-btn.secondary {
+      background: var(--dark-bg);
+      color: var(--dark-text);
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes typingAnimation {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    /* Responsive - Quan trọng: Sửa lỗi hiển thị trên mobile */
+    @media (max-width: 1024px) {
+      .sidebar {
+        position: fixed;
+        height: 100%;
+        top: 0;
+        left: 0;
+        transform: translateX(-100%);
+        z-index: 100;
+        width: 85%;
+        max-width: 320px;
+      }
+      
+      .sidebar.active {
+        transform: translateX(0);
+      }
+      
+      .toolbar-sidebar {
+        position: fixed;
+        height: 100%;
+        top: 0;
+        right: 0;
+        transform: translateX(100%);
+        z-index: 100;
+        width: 85%;
+        max-width: 280px;
+      }
+      
+      .toolbar-sidebar.active {
+        transform: translateX(0);
+      }
+      
+      .chat-main {
+        width: 100%;
+      }
+      
+      .mobile-top-toolbar {
+        display: flex;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .message {
+        max-width: 90%;
+      }
+      
+      .mobile-top-toolbar {
+        padding: 8px 10px;
+      }
+      
+      .mobile-top-tool-btn {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      
+      .mobile-top-tool-btn span {
+        display: none;
+      }
+      
+      .chat-title h1 {
+        font-size: 1.3rem;
+      }
+      
+      .chat-header {
+        padding: 12px 15px;
+      }
+      
+      .chat-messages {
+        padding: 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .chat-title h1 {
+        font-size: 1.2rem;
+      }
+      
+      .logo {
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+      }
+      
+      .mobile-top-toolbar {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 5px;
+      }
+      
+      .mobile-top-tool-btn {
+        flex: 1;
+        min-width: 40px;
+        padding: 8px 5px;
+        font-size: 12px;
+      }
+      
+      .chat-header {
+        padding: 10px 12px;
+      }
+      
+      .chat-messages {
+        padding: 12px;
+        gap: 15px;
+      }
+      
+      .message {
+        max-width: 95%;
+        gap: 8px;
+      }
+      
+      .avatar {
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+      }
+      
+      .message-content {
+        padding: 12px;
+        font-size: 14px;
+      }
+      
+      .chat-input-container {
+        padding: 12px;
+      }
+      
+      .chat-input {
+        padding: 10px;
+        font-size: 14px;
+        min-height: 45px;
+      }
+      
+      .send-btn {
+        height: 45px;
+        padding: 0 14px;
+        font-size: 14px;
+      }
+      
+      .suggestions-container {
+        margin: 0 12px 8px;
+        max-height: 150px;
+      }
+      
+      .suggestion-item {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+    }
+
+    /* Điều chỉnh đặc biệt cho màn hình rất nhỏ */
+    @media (max-height: 600px) and (max-width: 480px) {
+      .chat-header {
+        padding: 8px 10px;
+      }
+      
+      .chat-messages {
+        padding: 10px;
+        gap: 12px;
+      }
+      
+      .message-content {
+        padding: 10px;
+        font-size: 13px;
+      }
+      
+      .chat-input-container {
+        padding: 10px;
+      }
+    }
+
+    /* GỢI Ý CÂU HỎI */
+    .suggestions-container {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      right: 0;
+      background: var(--light-card);
+      border: 1px solid var(--light-border);
+      border-radius: 10px;
+      margin: 0 20px 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .suggestions-container {
+      background: var(--dark-card);
+      border: 1px solid var(--dark-border);
+    }
+
+    .suggestion-item {
+      padding: 10px 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid var(--light-border);
+    }
+
+    body.dark-mode .suggestion-item {
+      border-bottom: 1px solid var(--dark-border);
+    }
+
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .suggestion-item:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* NÚT SAO CHÉP */
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s, background 0.3s;
+      color: var(--light-text);
+    }
+
+    body.dark-mode .copy-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--dark-text);
+    }
+
+    .message-content:hover .copy-btn {
+      opacity: 1;
+    }
+
+    .copy-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* PHẢN HỒI */
+    .feedback-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      justify-content: flex-end;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .message-content:hover .feedback-container {
+      opacity: 1;
+    }
+
+    .feedback-btn {
+      background: transparent;
+      border: 1px solid var(--light-border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.3s;
+    }
+
+    body.dark-mode .feedback-btn {
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .feedback-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .feedback-btn.liked {
+      background: var(--success);
+      color: white;
+      border-color: var(--success);
+    }
+
+    .feedback-btn.disliked {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    /* Nút mới cho Export Chat */
+    .export-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      background: var(--light-bg);
+      border: 1px solid var(--light-border);
+      color: var(--light-text);
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      font-weight: 500;
+      width: 100%;
+    }
+
+    body.dark-mode .export-btn {
+      background: var(--dark-bg);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .export-btn:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* Nút chuyển đổi chế độ điện thoại */
+    .mobile-view-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      background: var(--light-bg);
+      border: 1px solid var(--light-border);
+      color: var(--light-text);
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      font-weight: 500;
+      width: 100%;
+    }
+
+    body.dark-mode .mobile-view-toggle {
+      background: var(--dark-bg);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .mobile-view-toggle:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* Chế độ xem điện thoại - FIXED */
+    body.mobile-view {
+      overflow: hidden;
+    }
+
+    body.mobile-view .container {
+      flex-direction: column;
+      height: 100%;
+    }
+
+    body.mobile-view .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      transform: translateX(-100%);
+      z-index: 100;
+      width: 85%;
+      max-width: 320px;
+    }
+    
+    body.mobile-view .sidebar.active {
+      transform: translateX(0);
+    }
+
+    body.mobile-view .toolbar-sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100%;
+      transform: translateX(100%);
+      z-index: 100;
+      width: 85%;
+      max-width: 280px;
+    }
+    
+    body.mobile-view .toolbar-sidebar.active {
+      transform: translateX(0);
+    }
+
+    body.mobile-view .chat-main {
+      width: 100%;
+      margin-top: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.mobile-view .mobile-top-toolbar {
+      display: flex;
+      position: relative;
+      box-shadow: none;
+      border-bottom: 1px solid var(--light-border);
+      padding: 10px;
+      flex-shrink: 0;
+    }
+
+    body.dark-mode.mobile-view .mobile-top-toolbar {
+      border-bottom: 1px solid var(--dark-border);
+    }
+
+    body.mobile-view .mobile-top-tool-btn {
+      flex: 1;
+      min-width: 40px;
+      padding: 10px;
+    }
+
+    body.mobile-view .mobile-top-tool-btn span {
+      display: none;
+    }
+
+    body.mobile-view .chat-header {
+      margin-top: 0;
+      padding: 15px;
+      flex-shrink: 0;
+    }
+
+    body.mobile-view .chat-messages {
+      padding: 15px;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      /* Thêm padding dưới cùng để không bị che bởi input */
+      padding-bottom: 80px;
+    }
+
+    body.mobile-view .message {
+      max-width: 95%;
+    }
+
+    body.mobile-view .chat-input-container {
+      padding: 15px;
+      flex-shrink: 0;
+      /* Đảm bảo input container luôn ở dưới cùng và hiển thị đầy đủ */
+      position: sticky;
+      bottom: 0;
+      background: var(--light-card);
+      z-index: 10;
+    }
+
+    body.dark-mode.mobile-view .chat-input-container {
+      background: var(--dark-card);
+    }
+
+    body.mobile-view .suggestions-container {
+      margin: 0 15px 10px;
+      bottom: calc(100% - 10px);
+    }
+    
+    /* Overlay cho sidebar trên mobile */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 90;
+    }
+    
+    .sidebar-overlay.active {
+      display: block;
+    }
+
+    /* Mobile-specific improvements */
+    body.mobile-view .chat-form {
+      align-items: flex-end;
+    }
+
+    body.mobile-view .chat-input {
+      min-height: 50px;
+      max-height: 120px;
+    }
+
+    body.mobile-view .send-btn {
+      padding: 0 15px;
+      height: 50px;
+    }
+
+    /* Điều chỉnh để đảm bảo không bị che khuất trên mobile */
+    @media (max-width: 1024px) {
+      body.mobile-view .chat-main {
+        padding-top: 60px; /* Tạo khoảng trống cho thanh toolbar trên mobile */
+      }
+      
+      body.mobile-view .mobile-top-toolbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+      }
+      
+      body.mobile-view .chat-messages {
+        margin-top: 60px; /* Bù lại chiều cao của thanh toolbar */
+        height: calc(100% - 140px); /* Tính toán chiều cao phù hợp */
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Nội dung HTML giữ nguyên từ bản gốc -->
+  <div class="container">
+    <!-- Overlay cho sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <!-- Thanh công cụ trên cùng cho mobile -->
+    <div class="mobile-top-toolbar">
+      <button class="mobile-top-tool-btn" id="mobileSidebarToggle" aria-label="Mở câu hỏi thường gặp">
+        <i class="fas fa-question-circle"></i>
+        <span>FAQ</span>
+      </button>
+      <button class="mobile-top-tool-btn" id="mobileDarkModeToggle" aria-label="Chuyển đổi chế độ sáng tối">
+        <i class="fas fa-moon"></i>
+        <span>Chế độ</span>
+      </button>
+      <button class="mobile-top-tool-btn" id="mobileReadAloud" aria-label="Đọc tin nhắn cuối cùng">
+        <i class="fas fa-volume-up"></i>
+        <span>Đọc</span>
+      </button>
+      <button class="mobile-top-tool-btn" id="mobileApiSettings" aria-label="Cài đặt API">
+        <i class="fas fa-key"></i>
+        <span>API</span>
+      </button>
+      <button class="mobile-top-tool-btn" id="mobileExportChat" aria-label="Xuất trò chuyện">
+        <i class="fas fa-download"></i>
+        <span>Xuất</span>
+      </button>
+      <button class="mobile-top-tool-btn" id="mobileToolbarToggle" aria-label="Mở công cụ">
+        <i class="fas fa-cog"></i>
+        <span>Công cụ</span>
+      </button>
+      <!-- Nút chuyển đổi chế độ điện thoại -->
+      <button class="mobile-top-tool-btn" id="mobileViewToggle" aria-label="Chuyển đổi chế độ điện thoại">
+        <i class="fas fa-mobile-alt"></i>
+        <span>Điện thoại</span>
+      </button>
+    </div>
+
+    <!-- Sidebar trái - Câu hỏi thường gặp -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2><i class="fas fa-question-circle"></i> Câu hỏi thường gặp</h2>
+        <button class="modal-close" id="closeSidebar">&times;</button>
+      </div>
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" class="search-box" placeholder="Tìm kiếm câu hỏi...">
+      </div>
+      <div class="questions-container">
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-school"></i> TỔNG QUAN</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content active">
+            <button class="question-btn"><i class="fas fa-comment"></i> Giới thiệu chung về CLB MIT</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Ý nghĩa tên gọi MIT</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Thông tin liên hệ</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-bullseye"></i> SỨ MỆNH VÀ TẦM NHÌN</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Sứ mệnh</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Tầm nhìn</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-sitemap"></i> MÔ HÌNH TỔ CHỨC</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Ban điều hành</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Các phân ban</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Thành viên trong từng ban</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-file-alt"></i> QUY ĐỊNH CHUNG</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Tên gọi</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Tôn chỉ</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Mục đích</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-tasks"></i> CHỨC NĂNG VÀ NHIỆM VỤ</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Chức năng</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Nhiệm vụ</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-coins"></i> CÔNG TÁC TÀI CHÍNH</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Tài chính</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-award"></i> KHEN THƯỞNG, KỶ LUẬT</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Khen thưởng</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Kỷ luật</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-users"></i> HỘI VIÊN</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Tiêu chuẩn Hội viên</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Quyền lợi của Hội viên</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Nghĩa vụ của Hội viên</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Đăng ký làm Hội viên</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Rút, xóa tên khỏi CLB</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-file-contract"></i> GIẤY TỜ LIÊN QUAN</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Đơn đăng kí tham gia CLB</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Đơn xin rút khỏi CLB</button>
+            <button class="question-btn"><i class="fas fa-comment"></i> Nội quy CLB MIT</button>
+          </div>
+        </div>
+
+        <div class="category">
+          <div class="category-header">
+            <span><i class="fas fa-door-open"></i> CÁCH THAM GIA CLB</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="category-content">
+            <button class="question-btn"><i class="fas fa-comment"></i> Cách tham gia CLB MIT</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phần chat chính -->
+    <div class="chat-main">
+      <div class="chat-header">
+        <div class="chat-title">
+          <div class="logo">MIT</div>
+          <h1>MIT GPT Assistant</h1>
+        </div>
+        <div class="chat-info">
+          <span id="ai-model-info">Đang sử dụng: Dữ liệu cục bộ</span>
+        </div>
+      </div>
+      <div class="chat-messages">
+        <div class="message bot">
+          <div class="avatar bot">
+            <i class="fas fa-robot"></i>
+          </div>
+          <div class="message-content">
+            Xin chào! Mình là MIT GPT, trợ lý ảo của CLB Công nghệ Thông tin trường THPT Mỹ Đình. 
+            Hãy chọn câu hỏi bên trái hoặc nhập câu hỏi của bạn để bắt đầu!
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-container">
+        <div class="suggestions-container" id="suggestionsContainer">
+          <!-- Gợi ý câu hỏi sẽ được thêm ở đây -->
+        </div>
+        <form class="chat-form">
+          <textarea class="chat-input" placeholder="Nhập câu hỏi của bạn..." id="chatInput"></textarea>
+          <button type="submit" class="send-btn">Gửi</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Thanh công cụ bên phải -->
+    <div class="toolbar-sidebar">
+      <div class="toolbar-header">
+        <h2><i class="fas fa-cog"></i> Công cụ</h2>
+        <button class="modal-close" id="closeToolbar">&times;</button>
+      </div>
+      <button class="tool-btn" id="darkModeToggle" aria-label="Chuyển đổi chế độ sáng tối">
+        <i class="fas fa-moon"></i>
+        <span>Chế độ tối</span>
+      </button>
+      <button class="tool-btn" id="sidebarToggle" aria-label="Mở câu hỏi thường gặp">
+        <i class="fas fa-question-circle"></i>
+        <span>Câu hỏi thường gặp</span>
+      </button>
+      <button class="tool-btn" id="readAloud" aria-label="Đọc tin nhắn cuối cùng">
+        <i class="fas fa-volume-up"></i>
+        <span>Đọc tin nhắn</span>
+      </button>
+      <button class="tool-btn" id="apiSettings" aria-label="Cài đặt API">
+        <i class="fas fa-key"></i>
+        <span>Cài đặt API</span>
+      </button>
+      <button class="tool-btn" id="exportChat" aria-label="Xuất trò chuyện">
+        <i class="fas fa-download"></i>
+        <span>Xuất trò chuyện</span>
+      </button>
+      <!-- Nút chuyển đổi chế độ điện thoại -->
+      <button class="mobile-view-toggle" id="mobileViewToggleToolbar">
+        <i class="fas fa-mobile-alt"></i>
+        <span>Chế độ điện thoại</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast thông báo -->
+  <div class="toast" id="toast">
+    <i class="fas fa-check-circle"></i>
+    <span>Đây là thông báo</span>
+  </div>
+
+  <!-- Modal nhập API Key -->
+  <div class="modal" id="apiKeyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fas fa-key"></i> Cài đặt API Key</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      
+      <div class="api-tabs">
+        <div class="api-tab active" data-tab="openai">OpenAI</div>
+        <div class="api-tab gemini" data-tab="gemini">Google Gemini</div>
+      </div>
+      
+      <div class="api-tab-content active" id="openai-tab">
+        <p class="api-info">
+          Nhập API Key từ OpenAI để sử dụng mô hình GPT. Bạn có thể lấy API Key từ trang web của OpenAI.
+        </p>
+        <input type="password" class="api-key-input" id="openaiKeyInput" placeholder="sk-...">
+        <select class="ai-model-selector" id="openaiModelSelector">
+          <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+          <option value="gpt-4">GPT-4</option>
+        </select>
+      </div>
+      
+      <div class="api-tab-content" id="gemini-tab">
+        <p class="api-info">
+          Nhập API Key từ Google AI Studio để sử dụng mô hình Gemini. Bạn có thể lấy API Key từ Google AI Studio.
+        </p>
+        <input type="password" class="api-key-input gemini-input" id="geminiKeyInput" placeholder="Nhập Gemini API Key">
+        <select class="ai-model-selector" id="geminiModelSelector">
+          <option value="gemini-pro">Gemini Pro</option>
+        </select>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="modal-btn secondary" id="cancelApiKey">Hủy</button>
+        <button class="modal-btn primary" id="saveApiKey">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // JavaScript giữ nguyên từ bản gốc
+    // Dữ liệu câu trả lời mẫu
+    const faqData = {
+      "Giới thiệu chung về CLB MIT": "Câu lạc bộ Công nghệ Thông tin trường THPT Mỹ Đình (MIT) được thành lập với  mục tiêu phát triển tư duy công nghệ theo hướng đổi mới,  sáng tạo, gần gũi và giàu cá tính của thế hệ trẻ. MIT  không chỉ tập trung vào lập trình phát triển các kỹ năng tin học mà còn góp phần khơi dậy khả năng khám phá, thử thách giới hạn bản thân, biến những kiến thức tưởng chừng khô khan trở nên sống động, thú vị và đầy màu sắc dưới lăng kính năng động, nhiệt huyết của tuổi trẻ. Thông qua các hoạt động tương tác xoay quanh những chủ đề công nghệ thông tin, MyDinh Information Technology Club hy vọng sẽ là nơi tạo điều kiện để mỗi người thể hiện góc nhìn cá nhân, rèn luyện tư duy công nghệ và phá bỏ rào cản tiếp cận tri thức.",
+      "Ý nghĩa tên gọi MIT": "MIT là viết tắt của Mỹ Đình Information Technology, thể hiện sự kết nối giữa trường THPT Mỹ Đình và lĩnh vực Công nghệ Thông tin.",
+      "Thông tin liên hệ": "Bạn có thể liên hệ với CLB MIT qua:\n- Facebook: https://www.facebook.com/mydinhitclub\n- Email: mydinhitclub@gmail.com",
+      "Sứ mệnh": "Sứ mệnh của CLB MIT là phổ cập kiến thức công nghệ, phát triển kỹ năng cho học sinh và tạo ra những sản phẩm công nghệ hữu ích cho nhà trường và cộng đồng.",
+      "Tầm nhìn": "Trở thành câu lạc bộ công nghệ hàng đầu trong các trường THPT tại Hà Nội, nơi ươm mầm những tài năng công nghệ tương lai.",
+      "Ban điều hành": "Ban điều hành CLB MIT gồm có:\n- Chủ nhiệm: Đoàn Phúc Uy Vũ \n- Phó chủ nhiệm: Nguyễn Đỗ Trà My K4A2",
+      "Các phân ban": "CLB MIT có các phân ban sau:-	Ban Chuyên Môn: \n +) Phân ban Office: Đảm nhận chuyên môn các nền tảng Word, Excel, PowerPoint, thiết kế slide. \n+) Phân ban Lập trình: Đăm nhận nhiệm vụ lập trình web cơ bản, Python, mini game, ứng dụng học tập. \n+) Phân ban Trí tuệ nhân tạo (AI): Tìm hiểu AI cơ bản, sử dụng AI trong học tập và sáng tạo nội dung (chatbot, AI image, AI video). \n+) Phân ban Multimedia: Dựng video (CapCut, Canva). \-	Ban Hậu Cần: \n+) Phân ban Truyền thông: Thiết kế poster, quản lý fanpage câu lạc bộ, quảng bá sự kiện. \n+) Phân ban Tài chính – Hậu cần: Quản lý các hoạt động tài chính, lập ngân sách, quản lý quỹ và tìm các nhà tài trợ cho hoạt động của MIT.",
+      "Thành viên trong từng ban": "Thông tin chi tiết về thành viên các ban sẽ được cập nhật trong cuộc họp thành viên định kỳ. Liên hệ ban chủ nhiệm để biết thêm chi tiết.",
+      "Tên gọi": "1.	Tên Tiếng Việt:  Câu lạc bộ Công nghệ Thông tin      2.	Tên Tiếng Anh: MyDinh Information Technology Club     3.	Tên viết tắt: MIT",
+      "Tôn chỉ": "Tôn chỉ -	Là nơi học tập, sáng tạo và thực hành qua các dự án lập trình, thiết kế, hay ứng dụng công nghệ mà trên lớp học chính khóa thường chưa có nhiều thời gian để trải nghiệm. -	Tạo ra một môi trường sinh hoạt lành mạnh, bổ ích, góp phần làm mới suy nghĩ của mọi người, biến tin học và công nghệ – vốn tưởng chừng khô khan – trở nên thú vị, gần gũi và đầy cảm hứng.",
+      "Mục đích": "Mục đích.  -	Mục đích chung: MyDinh IT được thành lập với mục tiêu tạo ra một không gian sinh hoạt thoải mái, tự do sáng tạo và gắn kết cộng đồng học sinh có đam mê công nghệ, mong muốn rèn luyện kỹ năng tin học và khám phá sâu hơn về các lĩnh vực liên quan đến công nghệ thông tin.    -	Mục đích cụ thể: CLB hướng tới mô hình học tập gắn với tư duy công nghệ và kỹ năng số, giúp học sinh tiếp cận nhiều hơn với các phương pháp học tập hiện đại, từ đó phát triển bản thân theo hướng tích cực, sáng tạo và hội nhập với kỷ nguyên công nghệ 4.0.",
+      "Chức năng": "-	Câu lạc bộ Tin học sẽ cung cấp những kiến thức bổ ích, thú vị về công nghệ, lập trình và ứng dụng tin học; đồng thời tổ chức các hoạt động trải nghiệm, dự án thực hành và trưng bày sản phẩm công nghệ để thu hút học sinh học hỏi, đào sâu kiến thức. -	Góp phần quảng bá hình ảnh của CLB cũng như xây dựng định hướng phát triển theo các phương pháp học tập hiện đại, hiệu quả và lành mạnh, giúp học sinh rèn luyện kỹ năng số và khơi gợi niềm đam mê công nghệ.",
+      "Nhiệm vụ": "-	Rèn luyện kỹ năng tin học thực tiễn và sáng tạo nội dung cho thành viên. -	Tiếp cận AI – công nghệ mới selon cách đơn giản, ứng dụng vào học tập và đời sống. -	Tạo cơ hội làm việc nhóm, giao lưu, kết bạn, tạo sản phẩm chung để lưu giữ kỷ niệm. -	Câu lạc bộ hy vọng sẽ có cơ hội hỗ trợ giáo viên trong công tác chuẩn bị bài giảng Powerpoint, chỉnh sửa video, soạn thảo Word, Excel…trong khả năng của CLB, MIT cam kết sẽ giữ kín bài giảng của thầy cô. -	Câu lạc bộ  MIT sẽ hỗ trợ trường trong các hoạt động truyền thông, sự kiện phù hợp với sứ mệnh và mục tiêu câu lạc bộ đề ra.",
+      "Tài chính": "Câu lạc bộ hoạt động chủ yếu trên nền tảng mạng xã hội, trang thông tin truyền thông trực tuyến nên sẽ không thu quỹ CLB. Nếu có chi phí phát sinh sẽ thông báo cho thành viên CLB.",
+      "Khen thưởng": "Những thành viên, nhóm thành viên có đóng góp tích cực cho câu lạc bộ được ghi nhận trong quá trình tham gia các hoạt động sẽ được ban điều hành câu lạc bộ đề xuất với BCH Đoàn trường THPT Mỹ Đình khen thưởng.",
+      "Kỷ luật": "-	Những thành viên vi phạm quy chế tùy theo mức độ sẽ bị kỷ luật từ khiển trách đến khai trừ ra khỏi câu lạc bộ được chia làm ba mức kỷ luật: +) Mức 1: Nhắc nhở  +) Mức 2: Kỷ luật trước toàn câu lạc bộ +) Mức 3: Khai trừ ra khỏi câu lạc bộ  -	Các hình thức của mức độ kỷ luật Cụ thể do ban điều hành câu lạc bộ đề ra và toàn thể câu lạc bộ thống nhất trên nguyên tắc biểu quyết dân chủ với sự đồng ý từ 50% chính thức tham gia biểu quyết trở lên",
+      "Tiêu chuẩn Hội viên": "Là học sinh trường THPT Mỹ Đình đạt hạnh kiểm Tốt -	Không vi phạm pháp luật, nội quy nhà trường, điều lệ của câu lạc bộ.",
+      "Quyền lợi của Hội viên": "Được tham gia các hoạt động của CLB. Được đề xuất các nguyện vọng, ý kiến đánh giá; được giúp đỡ và tạo điều kiện trong quá trình tham gia sinh hoạt. Được biểu dương, khen thưởng khi có những đóng góp tích cực, xuất sắc trong các hoạt động của CLB.",
+      "Đăng ký làm Hội viên": "Người muốn trở thành hội viên chính thức của câu lạc bộ phải tự nguyện làm đơn làm hồ sơ theo mẫu quy định của tổ chức. Đồng thời phải được phụ huynh xác nhận và đồng ý tham gia câu lạc bộ.",
+      "Nghĩa vụ của Hội viên": "Tôn trọng và tuân thủ điều lệ, nội quy của câu lạc bộ, giữ gìn tư cách hội viên. Tích cực tham gia các hoạt động của câu lạc bộ, thực hiện các nhiệm vụ của câu lạc bộ theo sự phân công của ban điều hành. Thực hiện công tác tuyên truyền nhằm nâng cao uy tín và mở rộng tầm ảnh hưởng của câu lạc bộ. Giới thiệu và phát triển hội viên mới",
+      "Rút, xóa tên khỏi CLB": "Thành viên muốn rút khỏi CLB cần:\n1. Viết đơn xin rút gửi Ban chủ nhiệm\n2. Bàn giao lại tài liệu, tài sản (nếu có)\n3. Thông báo trước ít nhất 2 tuần",
+      "Đơn đăng kí tham gia CLB": "Liên hệ bằng Gmail: mydinhitclub@gmail.com để nhận tài liệu",
+      "Đơn xin rút khỏi CLB": "Liên hệ bằng Gmail: mydinhitclub@gmail.com để nhận tài liệu",
+      "Nội quy CLB MIT": "Nội quy chi tiết được phát cho thành viên khi gia nhập CLB và được niêm yết tại phòng sinh hoạt. Liên hệ bằng Gmail: mydinhitclub@gmail.com để nhận tài liệu",
+      "Cách tham gia CLB MIT": "Qua Link (được đăng ở fanpage Facebook) hoặc đăng kí trực tiếp qua quầy(theo đợt)",
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Khởi tạo biến toàn cục
+      let openaiApiKey = localStorage.getItem('openaiApiKey') || '';
+      let geminiApiKey = localStorage.getItem('geminiApiKey') || '';
+      let openaiModel = localStorage.getItem('openaiModel') || 'gpt-3.5-turbo';
+      let geminiModel = localStorage.getItem('geminiModel') || 'gemini-pro';
+      let currentAI = localStorage.getItem('currentAI') || 'none';
+      let isMobileView = localStorage.getItem('mobileView') === 'true';
+      
+      // Nếu đang ở chế độ mobile view, kích hoạt ngay
+      if (isMobileView) {
+        document.body.classList.add('mobile-view');
+        document.getElementById('mobileViewToggle').innerHTML = '<i class="fas fa-desktop"></i><span>Máy tính</span>';
+        document.getElementById('mobileViewToggleToolbar').innerHTML = '<i class="fas fa-desktop"></i><span>Chế độ máy tính</span>';
+      }
+      
+      // Cập nhật thông tin AI đang sử dụng
+      updateAIModelInfo();
+      
+      // Elements
+      const sidebar = document.querySelector('.sidebar');
+      const toolbarSidebar = document.querySelector('.toolbar-sidebar');
+      const darkModeBtn = document.getElementById('darkModeToggle');
+      const mobileDarkModeBtn = document.getElementById('mobileDarkModeToggle');
+      const sidebarToggleBtn = document.getElementById('sidebarToggle');
+      const mobileSidebarToggleBtn = document.getElementById('mobileSidebarToggle');
+      const readAloudBtn = document.getElementById('readAloud');
+      const mobileReadAloudBtn = document.getElementById('mobileReadAloud');
+      const apiSettingsBtn = document.getElementById('apiSettings');
+      const mobileApiSettingsBtn = document.getElementById('mobileApiSettings');
+      const mobileToolbarToggleBtn = document.getElementById('mobileToolbarToggle');
+      const exportChatBtn = document.getElementById('exportChat');
+      const mobileExportChatBtn = document.getElementById('mobileExportChat');
+      const mobileViewToggleBtn = document.getElementById('mobileViewToggle');
+      const mobileViewToggleToolbarBtn = document.getElementById('mobileViewToggleToolbar');
+      const chatInput = document.getElementById('chatInput');
+      const suggestionsContainer = document.getElementById('suggestionsContainer');
+      const chatMessages = document.querySelector('.chat-messages');
+      const closeSidebarBtn = document.getElementById('closeSidebar');
+      const closeToolbarBtn = document.getElementById('closeToolbar');
+      const sidebarOverlay = document.getElementById('sidebarOverlay');
+      const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      // Kiểm tra chế độ màu từ hệ thống hoặc localStorage
+      if (localStorage.getItem('darkMode') === 'true' || 
+          (localStorage.getItem('darkMode') === null && prefersDarkScheme.matches)) {
+        document.body.classList.add('dark-mode');
+        darkModeBtn.innerHTML = '<i class="fas fa-sun"></i><span>Chế độ sáng</span>';
+        darkModeBtn.setAttribute('title', 'Chuyển sang chế độ sáng');
+        mobileDarkModeBtn.innerHTML = '<i class="fas fa-sun"></i>';
+      }
+      
+      // Toggle dark mode
+      darkModeBtn.addEventListener('click', toggleDarkMode);
+      mobileDarkModeBtn.addEventListener('click', toggleDarkMode);
+      
+      function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        if (document.body.classList.contains('dark-mode')) {
+          darkModeBtn.innerHTML = '<i class="fas fa-sun"></i><span>Chế độ sáng</span>';
+          darkModeBtn.setAttribute('title', 'Chuyển sang chế độ sáng');
+          mobileDarkModeBtn.innerHTML = '<i class="fas fa-sun"></i>';
+          localStorage.setItem('darkMode', 'true');
+        } else {
+          darkModeBtn.innerHTML = '<i class="fas fa-moon"></i><span>Chế độ tối</span>';
+          darkModeBtn.setAttribute('title', 'Chuyển sang chế độ tối');
+          mobileDarkModeBtn.innerHTML = '<i class="fas fa-moon"></i>';
+          localStorage.setItem('darkMode', 'false');
+        }
+      }
+
+      // Toggle mobile view
+      mobileViewToggleBtn.addEventListener('click', toggleMobileView);
+      mobileViewToggleToolbarBtn.addEventListener('click', toggleMobileView);
+      
+      function toggleMobileView() {
+        document.body.classList.toggle('mobile-view');
+        if (document.body.classList.contains('mobile-view')) {
+          mobileViewToggleBtn.innerHTML = '<i class="fas fa-desktop"></i>';
+          mobileViewToggleToolbarBtn.innerHTML = '<i class="fas fa-desktop"></i><span>Chế độ máy tính</span>';
+          localStorage.setItem('mobileView', 'true');
+        } else {
+          mobileViewToggleBtn.innerHTML = '<i class="fas fa-mobile-alt"></i>';
+          mobileViewToggleToolbarBtn.innerHTML = '<i class="fas fa-mobile-alt"></i><span>Chế độ điện thoại</span>';
+          localStorage.setItem('mobileView', 'false');
+        }
+      }
+
+      // Toggle category content
+      const categoryHeaders = document.querySelectorAll('.category-header');
+      categoryHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+          const content = this.nextElementSibling;
+          content.classList.toggle('active');
+          const icon = this.querySelector('i.fa-chevron-down');
+          icon.classList.toggle('fa-rotate-180');
+        });
+      });
+
+      // Toggle sidebars
+      sidebarToggleBtn.addEventListener('click', function() {
+        sidebar.classList.toggle('active');
+        sidebarOverlay.classList.toggle('active');
+        // Đảm bảo chỉ một sidebar mở tại một thời điểm trên mobile
+        if (window.innerWidth <= 1024 && toolbarSidebar.classList.contains('active')) {
+          toolbarSidebar.classList.remove('active');
+        }
+      });
+
+      mobileSidebarToggleBtn.addEventListener('click', function() {
+        sidebar.classList.toggle('active');
+        sidebarOverlay.classList.toggle('active');
+        // Đảm bảo chỉ một sidebar mở tại một thời điểm trên mobile
+        if (toolbarSidebar.classList.contains('active')) {
+          toolbarSidebar.classList.remove('active');
+        }
+      });
+
+      mobileToolbarToggleBtn.addEventListener('click', function() {
+        toolbarSidebar.classList.toggle('active');
+        sidebarOverlay.classList.toggle('active');
+        // Đảm bảo chỉ một sidebar mở tại một thời điểm trên mobile
+        if (sidebar.classList.contains('active')) {
+          sidebar.classList.remove('active');
+        }
+      });
+
+      // Đóng sidebar khi click nút đóng
+      closeSidebarBtn.addEventListener('click', function() {
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+      });
+      
+      closeToolbarBtn.addEventListener('click', function() {
+        toolbarSidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+      });
+      
+      // Đóng sidebar khi click ra ngoài
+      sidebarOverlay.addEventListener('click', function() {
+        sidebar.classList.remove('active');
+        toolbarSidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+      });
+
+      // Chat form submission
+      const chatForm = document.querySelector('.chat-form');
+
+      // Tự động điều chỉnh chiều cao textarea
+      chatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+      });
+
+      // Debounce function để tối ưu hiệu năng tìm kiếm
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      // Gợi ý câu hỏi khi nhập với debounce
+      const debouncedShowSuggestions = debounce(function() {
+        const searchTerm = chatInput.value.trim().toLowerCase();
+        if (searchTerm.length > 1) {
+          showSuggestions(searchTerm);
+        } else {
+          hideSuggestions();
+        }
+      }, 300);
+
+      chatInput.addEventListener('input', debouncedShowSuggestions);
+
+      // Hiển thị gợi ý
+      function showSuggestions(searchTerm) {
+        suggestionsContainer.innerHTML = '';
+        const suggestions = [];
+        
+        // Tìm trong các câu hỏi FAQ
+        for (const question of Object.keys(faqData)) {
+          if (question.toLowerCase().includes(searchTerm)) {
+            suggestions.push(question);
+            if (suggestions.length >= 5) break;
+          }
+        }
+        
+        // Hiển thị gợi ý
+        if (suggestions.length > 0) {
+          suggestions.forEach(suggestion => {
+            const suggestionEl = document.createElement('div');
+            suggestionEl.classList.add('suggestion-item');
+            suggestionEl.textContent = suggestion;
+            suggestionEl.addEventListener('click', () => {
+              chatInput.value = suggestion;
+              hideSuggestions();
+              chatForm.dispatchEvent(new Event('submit'));
+            });
+            suggestionsContainer.appendChild(suggestionEl);
+          });
+          suggestionsContainer.style.display = 'block';
+        } else {
+          hideSuggestions();
+        }
+      }
+
+      // Ẩn gợi ý
+      function hideSuggestions() {
+        suggestionsContainer.style.display = 'none';
+      }
+
+      // Ẩn gợi ý khi click ra ngoài
+      document.addEventListener('click', (e) => {
+        if (!suggestionsContainer.contains(e.target) && e.target !== chatInput) {
+          hideSuggestions();
+        }
+      });
+
+      // Cho phép gửi tin nhắn bằng phím Enter
+      chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          chatForm.dispatchEvent(new Event('submit'));
+        }
+      });
+
+      chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (message) {
+          addMessage(message, 'user');
+          chatInput.value = '';
+          chatInput.style.height = '50px';
+          hideSuggestions();
+          
+          // Hiển thị trạng thái đang nhập
+          showTypingIndicator();
+          
+          // Tìm câu trả lời
+          let response = findAnswer(message);
+          
+          // Nếu không tìm thấy trong FAQ, sử dụng API nếu có
+          if (!response) {
+            if (currentAI === 'openai' && openaiApiKey) {
+              getOpenAIResponseWithRetry(message)
+                .then(aiResponse => {
+                  removeTypingIndicator();
+                  addMessage(aiResponse, 'bot');
+                })
+                .catch(error => {
+                  removeTypingIndicator();
+                  const errorMsg = "Xin lỗi, có lỗi xảy ra khi kết nối với OpenAI. Vui lòng kiểm tra API Key và thử lại.";
+                  addMessage(errorMsg, 'bot');
+                  console.error("OpenAI API Error:", error);
+                });
+            } else if (currentAI === 'gemini' && geminiApiKey) {
+              getGeminiResponseWithRetry(message)
+                .then(aiResponse => {
+                  removeTypingIndicator();
+                  addMessage(aiResponse, 'bot');
+                })
+                .catch(error => {
+                  removeTypingIndicator();
+                  const errorMsg = "Xin lỗi, có lỗi xảy ra khi kết nối với Gemini. Vui lòng kiểm tra API Key và thử lại.";
+                  addMessage(errorMsg, 'bot');
+                  console.error("Gemini API Error:", error);
+                });
+            } else {
+              // Trả lời từ dữ liệu cục bộ sau một độ trễ
+              setTimeout(() => {
+                removeTypingIndicator();
+                const noInfoMsg = "Xin lỗi, mình chưa có thông tin về câu hỏi này. Vui lòng thử lại với câu hỏi khác hoặc liên hệ CLB MIT để được hỗ trợ.";
+                addMessage(noInfoMsg, 'bot');
+              }, 1000);
+            }
+          } else {
+            // Trả lời từ dữ liệu cục bộ sau một độ trễ
+            setTimeout(() => {
+              removeTypingIndicator();
+              addMessage(response, 'bot');
+            }, 1000);
+          }
+        }
+      });
+
+      // Tìm kiếm câu hỏi với debounce
+      const searchBox = document.querySelector('.search-box');
+      searchBox.addEventListener('input', debounce(function() {
+        const searchTerm = this.value.toLowerCase();
+        const categories = document.querySelectorAll('.category');
+        
+        categories.forEach(category => {
+          const questions = category.querySelectorAll('.question-btn');
+          let hasMatch = false;
+          
+          questions.forEach(question => {
+            const questionText = question.textContent.toLowerCase();
+            if (questionText.includes(searchTerm)) {
+              question.style.display = 'flex';
+              hasMatch = true;
+            } else {
+              question.style.display = 'none';
+            }
+          });
+          
+          // Hiển thị/ẩn category dựa trên kết quả tìm kiếm
+          if (hasMatch) {
+            category.style.display = 'block';
+            category.querySelector('.category-content').classList.add('active');
+          } else {
+            category.style.display = 'none';
+          }
+        });
+      }, 300));
+
+      // Nút đọc tin nhắn
+      readAloudBtn.addEventListener('click', readLastMessage);
+      mobileReadAloudBtn.addEventListener('click', readLastMessage);
+      
+      function readLastMessage() {
+        const lastBotMessage = document.querySelector('.message.bot:last-child .message-content');
+        if (lastBotMessage) {
+          const speech = new SpeechSynthesisUtterance(lastBotMessage.textContent);
+          speech.lang = 'vi-VN';
+          window.speechSynthesis.speak(speech);
+        }
+      }
+
+      // Nút cài đặt API
+      apiSettingsBtn.addEventListener('click', openApiModal);
+      mobileApiSettingsBtn.addEventListener('click', openApiModal);
+      
+      const apiKeyModal = document.getElementById('apiKeyModal');
+      const openaiKeyInput = document.getElementById('openaiKeyInput');
+      const geminiKeyInput = document.getElementById('geminiKeyInput');
+      const openaiModelSelector = document.getElementById('openaiModelSelector');
+      const geminiModelSelector = document.getElementById('geminiModelSelector');
+      const saveApiKeyBtn = document.getElementById('saveApiKey');
+      const cancelApiKeyBtn = document.getElementById('cancelApiKey');
+      const closeApiKeyModal = document.querySelector('.modal-close');
+      const apiTabs = document.querySelectorAll('.api-tab');
+
+      // Load saved API keys và models
+      openaiKeyInput.value = openaiApiKey;
+      geminiKeyInput.value = geminiApiKey;
+      openaiModelSelector.value = openaiModel;
+      geminiModelSelector.value = geminiModel;
+
+      // Switch tabs
+      apiTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.getAttribute('data-tab');
+          
+          // Update active tab
+          apiTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Update active content
+          document.querySelectorAll('.api-tab-content').forEach(content => {
+            content.classList.remove('active');
+          });
+          document.getElementById(`${tabName}-tab`).classList.add('active');
+        });
+      });
+
+      // Open modal
+      function openApiModal() {
+        apiKeyModal.classList.add('show');
+      }
+
+      // Close modal
+      const closeModal = () => {
+        apiKeyModal.classList.remove('show');
+      };
+
+      closeApiKeyModal.addEventListener('click', closeModal);
+      cancelApiKeyBtn.addEventListener('click', closeModal);
+
+      // Save API keys
+      saveApiKeyBtn.addEventListener('click', () => {
+        openaiApiKey = openaiKeyInput.value.trim();
+        geminiApiKey = geminiKeyInput.value.trim();
+        openaiModel = openaiModelSelector.value;
+        geminiModel = geminiModelSelector.value;
+        
+        // Xác định AI nào sẽ được sử dụng
+        if (openaiApiKey) {
+          currentAI = 'openai';
+        } else if (geminiApiKey) {
+          currentAI = 'gemini';
+        } else {
+          currentAI = 'none';
+        }
+        
+        localStorage.setItem('openaiApiKey', openaiApiKey);
+        localStorage.setItem('geminiApiKey', geminiApiKey);
+        localStorage.setItem('openaiModel', openaiModel);
+        localStorage.setItem('geminiModel', geminiModel);
+        localStorage.setItem('currentAI', currentAI);
+        
+        updateAIModelInfo();
+        showToast('Cài đặt API đã được lưu!');
+        closeModal();
+      });
+
+      // Hàm thêm tin nhắn vào giao diện
+      function addMessage(text, sender) {
+        const messageEl = document.createElement('div');
+        messageEl.classList.add('message', sender);
+        
+        const avatar = document.createElement('div');
+        avatar.classList.add('avatar', sender);
+        avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        
+        const messageContent = document.createElement('div');
+        messageContent.classList.add('message-content');
+        messageContent.textContent = text;
+        
+        // Thêm nút sao chép cho tin nhắn bot
+        if (sender === 'bot') {
+          const copyBtn = document.createElement('button');
+          copyBtn.classList.add('copy-btn');
+          copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+          copyBtn.setAttribute('title', 'Sao chép');
+          copyBtn.addEventListener('click', () => {
+            copyToClipboard(text);
+            showToast('Đã sao chép vào clipboard!');
+          });
+          messageContent.appendChild(copyBtn);
+          
+          // Thêm nút phản hồi
+          const feedbackContainer = document.createElement('div');
+          feedbackContainer.classList.add('feedback-container');
+          
+          const likeBtn = document.createElement('button');
+          likeBtn.classList.add('feedback-btn');
+          likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i> Hữu ích';
+          likeBtn.addEventListener('click', () => {
+            likeBtn.classList.toggle('liked');
+            if (likeBtn.classList.contains('liked')) {
+              dislikeBtn.classList.remove('disliked');
+            }
+            sendFeedback(text, likeBtn.classList.contains('liked') ? 'like' : 'none');
+          });
+          
+          const dislikeBtn = document.createElement('button');
+          dislikeBtn.classList.add('feedback-btn');
+          dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i> Không hữu ích';
+          dislikeBtn.addEventListener('click', () => {
+            dislikeBtn.classList.toggle('disliked');
+            if (dislikeBtn.classList.contains('disliked')) {
+              likeBtn.classList.remove('liked');
+            }
+            sendFeedback(text, dislikeBtn.classList.contains('disliked') ? 'dislike' : 'none');
+          });
+          
+          feedbackContainer.appendChild(likeBtn);
+          feedbackContainer.appendChild(dislikeBtn);
+          messageContent.appendChild(feedbackContainer);
+        }
+        
+        messageEl.appendChild(avatar);
+        messageEl.appendChild(messageContent);
+        
+        chatMessages.appendChild(messageEl);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Sao chép vào clipboard
+      function copyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      // Gửi phản hồi
+      function sendFeedback(message, feedback) {
+        // Lưu phản hồi vào localStorage
+        const feedbackData = {
+          message,
+          feedback,
+          timestamp: new Date().toISOString()
+        };
+        
+        let allFeedback = JSON.parse(localStorage.getItem('chatFeedback') || '[]');
+        allFeedback.push(feedbackData);
+        localStorage.setItem('chatFeedback', JSON.stringify(allFeedback));
+        
+        showToast(feedback === 'like' ? 'Cảm ơn phản hồi của bạn!' : 'Chúng tôi sẽ cải thiện câu trả lời!');
+      }
+
+      // Cập nhật thông tin AI đang sử dụng
+      function updateAIModelInfo() {
+        const aiModelInfo = document.getElementById('ai-model-info');
+        if (currentAI === 'openai') {
+          aiModelInfo.textContent = `Đang sử dụng: OpenAI (${openaiModel})`;
+        } else if (currentAI === 'gemini') {
+          aiModelInfo.textContent = `Đang sử dụng: Gemini (${geminiModel})`;
+        } else {
+          aiModelInfo.textContent = 'Đang sử dụng: Dữ liệu cục bộ';
+        }
+      }
+
+      // Hiển thị chỉ báo đang nhập
+      function showTypingIndicator() {
+        const typingEl = document.createElement('div');
+        typingEl.classList.add('message', 'bot');
+        typingEl.id = 'typing-indicator';
+        
+        const avatar = document.createElement('div');
+        avatar.classList.add('avatar', 'bot');
+        avatar.innerHTML = '<i class="fas fa-robot"></i>';
+        
+        const typingContent = document.createElement('div');
+        typingContent.classList.add('typing-indicator');
+        typingContent.innerHTML = `
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        `;
+        
+        typingEl.appendChild(avatar);
+        typingEl.appendChild(typingContent);
+        
+        chatMessages.appendChild(typingEl);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Xóa chỉ báo đang nhập
+      function removeTypingIndicator() {
+        const typingEl = document.getElementById('typing-indicator');
+        if (typingEl) {
+          typingEl.remove();
+        }
+      }
+
+      // Tìm câu trả lời trong dữ liệu FAQ với tìm kiếm nâng cao
+      function findAnswer(question) {
+        const qLower = question.toLowerCase();
+        
+        // Tìm kiếm khớ� chính xác
+        for (const [key, value] of Object.entries(faqData)) {
+          if (qLower.includes(key.toLowerCase())) {
+            return value;
+          }
+        }
+        
+        // Tìm kiếm theo từ khóa với độ tương đồng
+        const keywords = {
+          'giới thiệu': 'Giới thiệu chung về CLB MIT',
+          'liên hệ': 'Thông tin liên hệ',
+          'tham gia': 'Cách tham gia CLB MIT',
+          'đăng ký': 'Đăng ký làm Hội viên',
+          'sứ mệnh': 'Sứ mệnh',
+          'tầm nhìn': 'Tầm nhìn',
+          'ban điều hành': 'Ban điều hành',
+          'phân ban': 'Các phân ban',
+          'thành viên': 'Thành viên trong từng ban',
+          'nội quy': 'Nội quy CLB MIT',
+          'tài chính': 'Tài chính',
+          'khen thưởng': 'Khen thưởng',
+          'kỷ luật': 'Kỷ luật'
+        };
+        
+        let bestMatch = { key: null, score: 0 };
+        
+        for (const [keyword, answerKey] of Object.entries(keywords)) {
+          if (qLower.includes(keyword)) {
+            // Tính điểm dựa trên độ dài từ khóa và số lần xuất hiện
+            const score = keyword.length * (qLower.split(keyword).length - 1);
+            if (score > bestMatch.score) {
+              bestMatch = { key: answerKey, score };
+            }
+          }
+        }
+        
+        // Ngưỡng tối thiểu để coi là khớp
+        if (bestMatch.score >= 3) {
+          return faqData[bestMatch.key];
+        }
+        
+        return null;
+      }
+
+      // Gọi API OpenAI với retry mechanism
+      async function getOpenAIResponseWithRetry(question, retries = 2) {
+        try {
+          return await getOpenAIResponse(question);
+        } catch (error) {
+          if (retries > 0) {
+            console.log(`Retrying... ${retries} attempts left`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return getOpenAIResponseWithRetry(question, retries - 1);
+          }
+          throw error;
+        }
+      }
+
+      // Gọi API Gemini với retry mechanism
+      async function getGeminiResponseWithRetry(question, retries = 2) {
+        try {
+          return await getGeminiResponse(question);
+        } catch (error) {
+          if (retries > 0) {
+            console.log(`Retrying... ${retries} attempts left`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return getGeminiResponseWithRetry(question, retries - 1);
+          }
+          throw error;
+        }
+      }
+
+      // Gọi API OpenAI
+      async function getOpenAIResponse(question) {
+        if (!openaiApiKey) {
+          return "Vui lòng thiết lập API Key OpenAI để sử dụng tính năng trò chuyện thông minh.";
+        }
+        
+        try {
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${openaiApiKey}`
+            },
+            body: JSON.stringify({
+              model: openaiModel,
+              messages: [
+                {
+                  role: 'system',
+                  content: 'Bạn là trợ lý ảo của CLB Công nghệ Thông tin MIT trường THPT Mỹ Đình. Hãy trả lời các câu hỏi về CLB một cách thân thiện và chính xác. Nếu không biết câu trả lời, hãy đề nghị người dùng liên hệ trực tiếp với CLB.'
+                },
+                {
+                  role: 'user',
+                  content: question
+                }
+              ],
+              max_tokens: 500,
+              temperature: 0.7
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `Lỗi API: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          return data.choices[0].message.content;
+        } catch (error) {
+          console.error('Lỗi khi gọi OpenAI API:', error);
+          throw new Error(`Không thể kết nối đến OpenAI: ${error.message}`);
+        }
+      }
+
+      // Gọi API Gemini
+      async function getGeminiResponse(question) {
+        if (!geminiApiKey) {
+          return "Vui lòng thiết lập API Key Gemini để sử dụng tính năng trò chuyện thông minh.";
+        }
+        
+        try {
+          // Gemini API endpoint và cấu trúc yêu cầu
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`;
+          
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'json',
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: `Bạn là trợ lý ảo của CLB Công nghệ Thông tin MIT trường THPT Mỹ Đình. 
+                  Hãy trả lời câu hỏi sau về CLB một cách thân thiện và chính xác: ${question}`
+                }]
+              }],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 500,
+              }
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `Lỗi API: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          return data.candidates[0].content.parts[0].text;
+        } catch (error) {
+          console.error('Lỗi khi gọi Gemini API:', error);
+          throw new Error(`Không thể kết nối đến Gemini: ${error.message}`);
+        }
+      }
+
+      // Question buttons
+      const questionButtons = document.querySelectorAll('.question-btn');
+      questionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const question = this.textContent.replace('<i class="fas fa-comment"></i>', '').trim();
+          addMessage(question, 'user');
+          
+          // Hiển thị trạng thái đang nhập
+          showTypingIndicator();
+          
+          // Tìm câu trả lời
+          const answer = faqData[question] || "Xin lỗi, mình chưa có thông tin về câu hỏi này. Vui lòng thử lại với câu hỏi khác hoặc liên hệ CLB MIT để được hỗ trợ.";
+          
+          // Trả lời sau một độ trễ
+          setTimeout(() => {
+            removeTypingIndicator();
+            addMessage(answer, 'bot');
+          }, 1000);
+        });
+      });
+
+      // Show toast notification
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.querySelector('span').textContent = message;
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 3000);
+      }
+
+      // Export chat
+      exportChatBtn.addEventListener('click', exportChat);
+      mobileExportChatBtn.addEventListener('click', exportChat);
+      
+      function exportChat() {
+        const chatContent = Array.from(document.querySelectorAll('.message'))
+          .map(msg => {
+            const sender = msg.classList.contains('user') ? 'User' : 'Bot';
+            const content = msg.querySelector('.message-content').textContent;
+            return `${sender}: ${content}`;
+          })
+          .join('\n\n');
+        
+        const blob = new Blob([chatContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mit-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('Đã xuất trò chuyện thành công!');
+      }
+
+      // Close modal when clicking outside
+      window.addEventListener('click', (e) => {
+        if (e.target === apiKeyModal) {
+          closeModal();
+        }
+        
+        // Đóng sidebar khi click bên ngoài trên mobile
+        if (window.innerWidth <= 1024) {
+          if (!sidebar.contains(e.target) && !document.querySelector('.mobile-top-toolbar').contains(e.target) && sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+          }
+          if (!toolbarSidebar.contains(e.target) && !document.querySelector('.mobile-top-toolbar').contains(e.target) && toolbarSidebar.classList.contains('active')) {
+            toolbarSidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+          }
+        }
+      });
+
+      // Đăng ký Service Worker để hỗ trợ offline
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('ServiceWorker đã đăng ký thành công với phạm vi: ', registration.scope);
+            })
+            .catch(function(error) {
+              console.log('Đăng ký ServiceWorker thất bại: ', error);
+            });
+        });
+      }
+    });
+  </script>
+</body>
+</html>
